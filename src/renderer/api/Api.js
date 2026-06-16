@@ -10,7 +10,101 @@ import {
   changeKeysToCamelCase,
   changeKeysToKebabCase
 } from '@shared/utils'
-import { ENGINE_RPC_HOST } from '@shared/constants'
+import {
+  APP_RUN_MODE,
+  APP_THEME,
+  ENGINE_MAX_CONNECTION_PER_SERVER,
+  ENGINE_RPC_HOST,
+  ENGINE_RPC_PORT
+} from '@shared/constants'
+
+const WEB_CONFIG_STORAGE_KEY = 'motrix-web-config'
+
+const getRpcErrorMessage = (error) => {
+  if (!error) {
+    return ''
+  }
+
+  if (error.message) {
+    return error.message
+  }
+
+  if (error.faultString) {
+    return error.faultString
+  }
+
+  return ''
+}
+
+const assertMulticallResult = (data = []) => {
+  const errors = data
+    .filter(item => item && !Array.isArray(item) && getRpcErrorMessage(item))
+    .map(getRpcErrorMessage)
+
+  if (errors.length > 0) {
+    throw new Error(errors.join('\n'))
+  }
+
+  return data
+}
+
+const defaultWebConfig = () => ({
+  'auto-check-update': false,
+  'auto-hide-window': false,
+  'auto-sync-tracker': false,
+  'enable-upnp': false,
+  'engine-max-connection-per-server': ENGINE_MAX_CONNECTION_PER_SERVER,
+  'favorite-directories': [],
+  'hide-app-menu': false,
+  'history-directories': [],
+  'keep-seeding': false,
+  'keep-window-state': false,
+  'last-check-update-time': 0,
+  'last-sync-tracker-time': 0,
+  locale: navigator.language || 'en-US',
+  'log-level': 'warn',
+  'new-task-show-downloading': true,
+  'no-confirm-before-delete-task': false,
+  'open-at-login': false,
+  protocols: { magnet: true, thunder: false },
+  proxy: {
+    enable: false,
+    server: '',
+    bypass: '',
+    scope: []
+  },
+  'resume-all-when-app-launched': false,
+  'run-mode': APP_RUN_MODE.STANDARD,
+  'show-progress-bar': false,
+  'task-notification': false,
+  theme: APP_THEME.AUTO,
+  'tracker-source': [],
+  'tray-theme': APP_THEME.AUTO,
+  'tray-speedometer': false,
+  'update-channel': 'latest',
+  'window-state': {},
+  'allow-overwrite': false,
+  'auto-file-renaming': true,
+  'bt-force-encryption': false,
+  'bt-load-saved-metadata': true,
+  'bt-save-metadata': true,
+  continue: true,
+  dir: '/downloads',
+  'follow-metalink': true,
+  'follow-torrent': true,
+  'max-concurrent-downloads': 5,
+  'max-connection-per-server': ENGINE_MAX_CONNECTION_PER_SERVER,
+  'max-download-limit': 0,
+  'max-overall-download-limit': 0,
+  'max-overall-upload-limit': 0,
+  'pause-metadata': false,
+  pause: true,
+  'rpc-listen-port': ENGINE_RPC_PORT,
+  'rpc-secret': '',
+  'seed-ratio': 2,
+  'seed-time': 2880,
+  split: ENGINE_MAX_CONNECTION_PER_SERVER
+})
 
 export default class Api {
   constructor (options = {}) {
@@ -27,9 +121,18 @@ export default class Api {
   }
 
   loadConfigFromLocalStorage () {
-    // TODO
-    const result = {}
-    return result
+    const defaults = defaultWebConfig()
+    const stored = window.localStorage.getItem(WEB_CONFIG_STORAGE_KEY)
+    if (!stored) {
+      return defaults
+    }
+
+    try {
+      return { ...defaults, ...JSON.parse(stored) }
+    } catch (err) {
+      console.warn('[Motrix] load web config fail:', err)
+      return defaults
+    }
   }
 
   async loadConfigFromNativeStore () {
@@ -51,11 +154,18 @@ export default class Api {
       rpcListenPort: port,
       rpcSecret: secret
     } = this.config
-    const host = ENGINE_RPC_HOST
+    const isWeb = !is.renderer()
+    const host = is.renderer()
+      ? ENGINE_RPC_HOST
+      : (window.location.hostname || ENGINE_RPC_HOST)
+    const rpcPort = isWeb
+      ? Number(window.location.port || (window.location.protocol === 'https:' ? 443 : 80))
+      : port
     return new Aria2({
       host,
-      port,
-      secret
+      port: rpcPort,
+      secret,
+      secure: isWeb && window.location.protocol === 'https:'
     })
   }
 
@@ -85,8 +195,12 @@ export default class Api {
     }
   }
 
-  savePreferenceToLocalStorage () {
-    // TODO
+  savePreferenceToLocalStorage (params = {}) {
+    const current = this.loadConfigFromLocalStorage()
+    const next = { ...current, ...params }
+    window.localStorage.setItem(WEB_CONFIG_STORAGE_KEY, JSON.stringify(next))
+    this.config = changeKeysToCamelCase(next)
+    this.updateActiveTaskOption(params)
   }
 
   savePreferenceToNativeStore (params = {}) {
@@ -181,7 +295,7 @@ export default class Api {
       const args = compactUndefined([[uri], engineOptions])
       return ['aria2.addUri', ...args]
     })
-    return this.client.multicall(tasks)
+    return this.client.multicall(tasks).then(assertMulticallResult)
   }
 
   addTorrent (params) {

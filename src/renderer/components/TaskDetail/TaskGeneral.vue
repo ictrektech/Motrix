@@ -167,9 +167,16 @@
       handleCopyClick () {
         const { task } = this
         const uri = getTaskUri(task)
+        if (!navigator.clipboard || !navigator.clipboard.writeText) {
+          this.$msg.error('Copy link failed')
+          return
+        }
         navigator.clipboard.writeText(uri)
           .then(() => {
             this.$msg.success(this.$t('task.copy-link-success'))
+          })
+          .catch(() => {
+            this.$msg.error('Copy link failed')
           })
       }
     }

@@ -24,6 +24,8 @@
     "build:web": "cross-env BUILD_TARGET=web node .electron-vue/build.js",
     "dev": "node .electron-vue/dev-runner.js",
     "dev:renderer": "webpack serve --node-env development --hot --color --config .electron-vue/webpack.renderer.config.js --port 9080 --content-base app/dist",
+    "dev:web": "webpack serve --node-env development --hot --color --config .electron-vue/webpack.web.config.js --host 0.0.0.0 --port 47000",
+    "start:web": "npm run dev:web",
     "lint": "eslint --ext .js,.vue -f ./node_modules/eslint-friendly-formatter src",
     "lint:fix": "eslint --ext .js,.vue -f ./node_modules/eslint-friendly-formatter --fix src",
     "pack": "npm run pack:main && npm run pack:renderer",

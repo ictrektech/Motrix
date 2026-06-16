@@ -110,17 +110,7 @@
         this.$store.dispatch('task/changeCurrentList', this.status)
       },
       directAddTask (uri, options = {}) {
-        const uris = [uri]
-        const payload = {
-          uris,
-          options: {
-            ...options
-          }
-        }
-        this.$store.dispatch('task/addUri', payload)
-          .catch((err) => {
-            this.$msg.error(err.message)
-          })
+        this.showAddTaskDialog(uri, options)
       },
       showAddTaskDialog (uri, options = {}) {
         const {
@@ -370,9 +360,16 @@
       handleCopyTaskLink (payload) {
         const { task } = payload
         const uri = getTaskUri(task)
+        if (!navigator.clipboard || !navigator.clipboard.writeText) {
+          this.$msg.error('Copy link failed')
+          return
+        }
         navigator.clipboard.writeText(uri)
           .then(() => {
             this.$msg.success(this.$t('task.copy-link-success'))
+          })
+          .catch(() => {
+            this.$msg.error('Copy link failed')
           })
       },
       handleShowTaskInfo (payload) {

@@ -102,15 +102,22 @@ function pack (config) {
 }
 
 function web () {
-  deleteSync(['dist/web/*', '!.gitkeep'])
+  del.sync(['dist/web/*', '!.gitkeep'])
   webConfig.mode = 'production'
   Webpack(webConfig, (err, stats) => {
-    if (err || stats.hasErrors()) console.log(err)
+    if (err) {
+      console.error(err)
+      process.exit(1)
+    }
 
     console.log(stats.toString({
       chunks: false,
       colors: true
     }))
+
+    if (stats.hasErrors()) {
+      process.exit(1)
+    }
 
     process.exit()
   })

@@ -14,6 +14,30 @@ import {
   buildDefaultOptionsFromCurl
 } from '@shared/utils/curl'
 
+const DEFAULT_WEB_OUT = 'download'
+
+const isSupportedUri = (uri = '') => {
+  return /^(https?|ftp):\/\//i.test(uri) || uri.startsWith('magnet:')
+}
+
+const getDefaultOutForUri = (uri, index) => {
+  if (!/^(https?|ftp):\/\//i.test(uri)) {
+    return ''
+  }
+
+  try {
+    const { pathname } = new URL(uri)
+    const filename = pathname.split('/').filter(Boolean).pop()
+    if (filename) {
+      return ''
+    }
+  } catch (_) {
+    return ''
+  }
+
+  return index === 0 ? DEFAULT_WEB_OUT : `${DEFAULT_WEB_OUT}-${index + 1}`
+}
+
 export const initTaskForm = state => {
   const { addTaskUrl, addTaskOptions } = state.app
   const {
@@ -120,7 +144,22 @@ export const buildUriPayload = (form) => {
   uris = splitTaskLinks(uris)
   const curlHeaders = buildHeadersFromCurl(uris)
   uris = buildUrisFromCurl(uris)
+  uris = uris.filter(uri => isSupportedUri(uri))
+  if (isEmpty(uris)) {
+    throw new Error('task.new-task-uris-required')
+  }
+
   const outs = buildOuts(uris, out)
+  uris.forEach((uri, index) => {
+    if (outs[index]) {
+      return
+    }
+
+    const defaultOut = getDefaultOutForUri(uri, index)
+    if (defaultOut) {
+      outs[index] = defaultOut
+    }
+  })
 
   form = buildDefaultOptionsFromCurl(form, curlHeaders)
 

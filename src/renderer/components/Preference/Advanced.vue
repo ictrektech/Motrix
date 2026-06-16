@@ -581,14 +581,18 @@
           port: this.form.rpcListenPort,
           secret: val
         })
-        navigator.clipboard.writeText(url)
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(url).catch(() => {})
+        }
       },
       'form.rpcSecret' (val) {
         const url = buildRpcUrl({
           port: this.form.rpcListenPort,
           secret: val
         })
-        navigator.clipboard.writeText(url)
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(url).catch(() => {})
+        }
       }
     },
     methods: {

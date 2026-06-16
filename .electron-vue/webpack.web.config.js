@@ -27,9 +27,7 @@ let webConfig = {
   entry: {
     index: path.join(__dirname, '../src/renderer/pages/index/main.js')
   },
-  externals: [
-    ...Object.keys(dependencies || {}).filter(d => !whiteListedModules.includes(d))
-  ],
+  externals: [],
   module: {
     rules: [
       {
@@ -48,7 +46,7 @@ let webConfig = {
             loader: 'sass-loader',
             options: {
               implementation: require('sass'),
-              additionalData: '@import "@/components/Theme/Variables.scss"',
+              additionalData: '@import "@/components/Theme/Variables.scss";',
               sassOptions: {
                 includePaths:[__dirname, 'src']
               }
@@ -66,7 +64,7 @@ let webConfig = {
             options: {
               implementation: require('sass'),
               indentedSyntax: true,
-              additionalData: '@import "@/components/Theme/Variables.scss"',
+              additionalData: '@import "@/components/Theme/Variables.scss";',
               sassOptions: {
                 includePaths:[__dirname, 'src']
               }
@@ -92,7 +90,10 @@ let webConfig = {
       {
         test: /\.js$/,
         use: 'babel-loader',
-        include: [ path.resolve(__dirname, '../src/renderer') ],
+        include: [
+          path.resolve(__dirname, '../src/renderer'),
+          path.resolve(__dirname, '../src/shared')
+        ],
         exclude: /node_modules/
       },
       {
@@ -142,8 +143,21 @@ let webConfig = {
         : false
     }),
     new Webpack.DefinePlugin({
+      'process.env.PORTABLE_EXECUTABLE_DIR': '""',
       'process.env.IS_WEB': 'true'
     }),
+    new Webpack.NormalModuleReplacementPlugin(
+      /^node:events$/,
+      path.join(__dirname, '../src/renderer/web/shims/events.js')
+    ),
+    new Webpack.NormalModuleReplacementPlugin(
+      /^node:fs$/,
+      path.join(__dirname, '../src/renderer/web/shims/fs.js')
+    ),
+    new Webpack.NormalModuleReplacementPlugin(
+      /^node:path$/,
+      path.join(__dirname, '../src/renderer/web/shims/path.js')
+    ),
     new Webpack.HotModuleReplacementPlugin(),
     new Webpack.NoEmitOnErrorsPlugin(),
     new ESLintPlugin({
@@ -161,9 +175,38 @@ let webConfig = {
     alias: {
       '@': path.join(__dirname, '../src/renderer'),
       '@shared': path.join(__dirname, '../src/shared'),
+      'electron$': path.join(__dirname, '../src/renderer/web/shims/electron.js'),
+      '@electron/remote$': path.join(__dirname, '../src/renderer/web/shims/remote.js'),
+      'electron-is$': path.join(__dirname, '../src/renderer/web/shims/electron-is.js'),
+      '@/utils/native$': path.join(__dirname, '../src/renderer/web/native.js'),
+      'node:events$': path.join(__dirname, '../src/renderer/web/shims/events.js'),
+      'node-fetch$': path.join(__dirname, '../src/renderer/web/shims/node-fetch.js'),
+      'parse-torrent$': path.join(__dirname, '../src/renderer/web/shims/parse-torrent.js'),
+      'ws$': path.join(__dirname, '../src/renderer/web/shims/ws.js'),
       'vue$': 'vue/dist/vue.esm.js'
     },
     extensions: ['.js', '.vue', '.json', '.css']
+  },
+  devServer: {
+    host: '0.0.0.0',
+    port: 47000,
+    allowedHosts: 'all',
+    hot: true,
+    proxy: {
+      '/jsonrpc': {
+        target: 'http://127.0.0.1:16800',
+        changeOrigin: true,
+        ws: true
+      }
+    },
+    static: {
+      directory: path.join(__dirname, '../static'),
+      publicPath: '/static'
+    },
+    client: {
+      webSocketURL: 'auto://0.0.0.0:0/ws',
+      overlay: false
+    }
   },
   target: 'web',
   optimization: {
@@ -192,7 +235,7 @@ if (!devMode) {
     new CopyWebpackPlugin({
       patterns: [{
         from: path.join(__dirname, '../static'),
-        to: path.join(__dirname, '../dist/electron/static'),
+        to: path.join(__dirname, '../dist/web/static'),
         globOptions: { ignore: [ '.*' ] }
       }]
     }),

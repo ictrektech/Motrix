@@ -41,6 +41,9 @@
     },
     watch: {
       speed (val) {
+        if (!this.isRenderer) {
+          return
+        }
         const { uploadSpeed, downloadSpeed } = this
         this.$electron.ipcRenderer.send('event', 'speed-change', {
           uploadSpeed,
@@ -53,6 +56,9 @@
         }
       },
       progress (val) {
+        if (!this.isRenderer) {
+          return
+        }
         this.$electron.ipcRenderer.send('event', 'progress-change', val)
       }
     },
@@ -153,7 +159,9 @@
 
         const path = getTaskFullPath(task)
         this.showTaskCompleteNotify(task, isBT, path)
-        this.$electron.ipcRenderer.send('event', 'task-download-complete', task, path)
+        if (this.isRenderer) {
+          this.$electron.ipcRenderer.send('event', 'task-download-complete', task, path)
+        }
       },
       showTaskCompleteNotify (task, isBT, path) {
         const taskName = getTaskName(task)

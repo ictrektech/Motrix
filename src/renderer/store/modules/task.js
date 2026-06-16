@@ -67,6 +67,10 @@ const actions = {
         const list = intersection(selectedGidList, gids)
         commit('UPDATE_SELECTED_GID_LIST', list)
       })
+      .catch((err) => {
+        console.warn('[Motrix] fetch task list fail:', err)
+        commit('UPDATE_TASK_LIST', [])
+      })
   },
   selectTasks ({ commit }, list) {
     commit('UPDATE_SELECTED_GID_LIST', list)
@@ -124,7 +128,9 @@ const actions = {
     const { uris, outs, options } = data
     return api.addUri({ uris, outs, options })
       .then(() => {
-        dispatch('fetchList')
+        return dispatch('fetchList')
+      })
+      .then(() => {
         dispatch('app/updateAddTaskOptions', {}, { root: true })
       })
   },
@@ -132,7 +138,9 @@ const actions = {
     const { torrent, options } = data
     return api.addTorrent({ torrent, options })
       .then(() => {
-        dispatch('fetchList')
+        return dispatch('fetchList')
+      })
+      .then(() => {
         dispatch('app/updateAddTaskOptions', {}, { root: true })
       })
   },
@@ -140,7 +148,9 @@ const actions = {
     const { metalink, options } = data
     return api.addMetalink({ metalink, options })
       .then(() => {
-        dispatch('fetchList')
+        return dispatch('fetchList')
+      })
+      .then(() => {
         dispatch('app/updateAddTaskOptions', {}, { root: true })
       })
   },

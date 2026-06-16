@@ -272,7 +272,18 @@
     },
     methods: {
       async autofillResourceLink () {
-        const content = await navigator.clipboard.readText()
+        if (!navigator.clipboard || !navigator.clipboard.readText) {
+          return
+        }
+
+        let content = ''
+        try {
+          content = await navigator.clipboard.readText()
+        } catch (err) {
+          console.warn('[Motrix] clipboard read is not available:', err)
+          return
+        }
+
         const hasResource = detectResource(content)
         if (!hasResource) {
           return
@@ -320,10 +331,10 @@
         this.$store.dispatch('app/changeAddTaskType', tab.name)
       },
       handleUriPaste () {
-        setImmediate(() => {
+        setTimeout(() => {
           const uris = this.$refs.uri.value
           this.detectThunderResource(uris)
-        })
+        }, 0)
       },
       detectThunderResource (uris = '') {
         if (uris.includes('thunder://')) {
@@ -349,18 +360,14 @@
         this.showAdvanced = false
         this.form = initTaskForm(this.$store.state)
       },
-      addTask (type, form) {
+      async addTask (type, form) {
         let payload = null
         if (type === ADD_TASK_TYPE.URI) {
           payload = buildUriPayload(form)
-          this.$store.dispatch('task/addUri', payload).catch(err => {
-            this.$msg.error(err.message)
-          })
+          await this.$store.dispatch('task/addUri', payload)
         } else if (type === ADD_TASK_TYPE.TORRENT) {
           payload = buildTorrentPayload(form)
-          this.$store.dispatch('task/addTorrent', payload).catch(err => {
-            this.$msg.error(err.message)
-          })
+          await this.$store.dispatch('task/addTorrent', payload)
         } else if (type === 'metalink') {
         // @TODO addMetalink
         } else {
@@ -368,13 +375,13 @@
         }
       },
       submitForm (formName) {
-        this.$refs[formName].validate(valid => {
+        this.$refs[formName].validate(async valid => {
           if (!valid) {
             return false
           }
 
           try {
-            this.addTask(this.type, this.form)
+            await this.addTask(this.type, this.form)
 
             this.$store.dispatch('app/hideAddTaskDialog')
             if (this.form.newTaskShowDownloading) {
@@ -385,7 +392,9 @@
               })
             }
           } catch (err) {
-            this.$msg.error(this.$t(err.message))
+            const translated = this.$t(err.message)
+            const message = translated === err.message ? err.message : translated
+            this.$msg.error(message)
           }
         })
       }

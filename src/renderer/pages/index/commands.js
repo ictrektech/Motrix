@@ -64,28 +64,25 @@ const addTask = (payload = {}) => {
   store.dispatch('app/showAddTaskDialog', type)
 }
 
-const addTaskSilent = (type) => {
+const addTaskSilent = async (type) => {
   try {
-    addTaskByType(type)
+    await addTaskByType(type)
   } catch (err) {
-    Message.error(i18n.t(err.message))
+    const translated = i18n.t(err.message)
+    Message.error(translated === err.message ? err.message : translated)
   }
 }
 
-const addTaskByType = (type) => {
+const addTaskByType = async (type) => {
   const form = initTaskForm(store.state)
 
   let payload = null
   if (type === ADD_TASK_TYPE.URI) {
     payload = buildUriPayload(form)
-    store.dispatch('task/addUri', payload).catch(err => {
-      Message.error(err.message)
-    })
+    await store.dispatch('task/addUri', payload)
   } else if (type === ADD_TASK_TYPE.TORRENT) {
     payload = buildTorrentPayload(form)
-    store.dispatch('task/addTorrent', payload).catch(err => {
-      Message.error(err.message)
-    })
+    await store.dispatch('task/addTorrent', payload)
   } else if (type === 'metalink') {
   // @TODO addMetalink
   } else {

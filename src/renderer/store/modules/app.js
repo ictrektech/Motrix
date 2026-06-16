@@ -113,9 +113,12 @@ const actions = {
     commit('UPDATE_ABOUT_PANEL_VISIBLE', false)
   },
   fetchEngineInfo ({ commit }) {
-    api.getVersion()
+    return api.getVersion()
       .then((data) => {
         commit('UPDATE_ENGINE_INFO', data)
+      })
+      .catch((err) => {
+        console.warn('[Motrix] fetch engine info fail:', err)
       })
   },
   fetchEngineOptions ({ commit }) {
@@ -125,10 +128,14 @@ const actions = {
           commit('UPDATE_ENGINE_OPTIONS', data)
           resolve(data)
         })
+        .catch((err) => {
+          console.warn('[Motrix] fetch engine options fail:', err)
+          resolve({})
+        })
     })
   },
   fetchGlobalStat ({ commit, dispatch }) {
-    api.getGlobalStat()
+    return api.getGlobalStat()
       .then((data) => {
         const stat = {}
         Object.keys(data).forEach((key) => {
@@ -145,6 +152,9 @@ const actions = {
           dispatch('increaseInterval')
         }
         commit('UPDATE_GLOBAL_STAT', stat)
+      })
+      .catch((err) => {
+        console.warn('[Motrix] fetch global stat fail:', err)
       })
   },
   increaseInterval ({ commit }, millisecond = 100) {
@@ -178,7 +188,7 @@ const actions = {
     commit('UPDATE_INTERVAL', BASE_INTERVAL)
   },
   fetchProgress ({ commit }) {
-    api.fetchActiveTaskList()
+    return api.fetchActiveTaskList()
       .then((data) => {
         let progress = -1
         if (data.length !== 0) {
@@ -197,6 +207,9 @@ const actions = {
           }
         }
         commit('UPDATE_PROGRESS', progress)
+      })
+      .catch((err) => {
+        console.warn('[Motrix] fetch progress fail:', err)
       })
   }
 }

@@ -104,7 +104,11 @@
         }
 
         remote(file.raw, { timeout: 60 * 1000 }, (err, parsedTorrent) => {
-          if (err) throw err
+          if (err) {
+            this.$msg.error(err.message)
+            this.reset()
+            return
+          }
           console.log('[Motrix] parsed torrent: ', parsedTorrent)
           this.files = listTorrentFiles(parsedTorrent.files)
           this.$refs.torrentFileList.toggleAllSelection()
